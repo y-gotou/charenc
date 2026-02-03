@@ -14,7 +14,7 @@
 
 | Encoding | Aliases | Description |
 |----------|---------|-------------|
-| utf-8 | utf8 | Unicode (default for Claude Code) |
+| utf-8 | utf8 | Unicode (default for AI agents) |
 | utf-8-sig | | UTF-8 with BOM |
 | utf-16 | utf16 | UTF-16 with BOM |
 | utf-16-le | | UTF-16 Little Endian |

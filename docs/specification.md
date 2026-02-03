@@ -2,7 +2,7 @@
 
 ## 概要
 
-Claude Code で cp932 等の非UTF-8ファイルを編集する際の文字化け問題を解決するスキル。
+AIエージェントで cp932 等の非UTF-8ファイルを編集する際の文字化け問題を解決するスキル。
 
 **ワークフロー**: `cp932ファイル → UTF-8に変換 → 編集 → cp932に戻す`
 
@@ -85,7 +85,7 @@ python restore_encoding.py <file>
 ### Unicode
 | エンコーディング | 用途 |
 |----------------|------|
-| utf-8 | Unicode（Claude Code標準） |
+| utf-8 | Unicode（標準） |
 | utf-8-sig | UTF-8 with BOM |
 | utf-16 | UTF-16 with BOM |
 | utf-16-le/be | UTF-16 Little/Big Endian |

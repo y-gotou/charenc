@@ -1,7 +1,7 @@
 ---
 name: charenc
 description: |
-  Character encoding conversion for editing non-UTF-8 files with Claude Code.
+  Character encoding conversion for editing non-UTF-8 files with AI agents.
   Use when: (1) Editing files with Japanese characters that appear garbled,
   (2) Working with legacy codebases using cp932/Shift-JIS/EUC-JP encoding,
   (3) Converting file encodings before editing and restoring after.
@@ -10,7 +10,7 @@ description: |
 
 # Character Encoding Conversion
 
-Claude Code operates in UTF-8. This skill enables editing non-UTF-8 files (cp932, shift-jis, euc-jp, etc.) through a convert-edit-restore workflow.
+Most AI agents operate in UTF-8. This skill enables editing non-UTF-8 files (cp932, shift-jis, euc-jp, etc.) through a convert-edit-restore workflow.
 
 ## Quick Start
 
@@ -31,7 +31,7 @@ This creates:
 
 ### 2. Edit the file
 
-The file is now UTF-8. Edit freely with Claude Code.
+The file is now UTF-8. Edit freely with your AI agent.
 
 ### 3. Restore original encoding
 

@@ -3,8 +3,18 @@
 
 import sys
 import json
+import hashlib
 import argparse
 from pathlib import Path
+
+
+def get_file_hash(file_path: Path) -> str:
+    """Calculate SHA256 hash of file."""
+    sha256 = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            sha256.update(chunk)
+    return sha256.hexdigest()
 
 
 def restore_encoding(
@@ -12,7 +22,8 @@ def restore_encoding(
     encoding: str = None,
     output: str = None,
     errors: str = 'strict',
-    cleanup: bool = True
+    cleanup: bool = True,
+    force: bool = False
 ) -> dict:
     """Restore file to original encoding.
 
@@ -22,6 +33,7 @@ def restore_encoding(
         output: Output file path (default: overwrite original)
         errors: Error handling ('strict', 'replace', 'backslashreplace', 'xmlcharrefreplace')
         cleanup: Remove backup and metadata files after restore
+        force: Force restore even if file hash doesn't match
 
     Returns:
         dict with restoration result
@@ -42,6 +54,24 @@ def restore_encoding(
                 metadata = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             return {"status": "error", "error": f"Cannot read metadata: {e}"}
+
+    # Verify file hash if metadata contains original_hash
+    hash_warning = None
+    if metadata and 'original_hash' in metadata:
+        try:
+            current_hash = get_file_hash(path)
+            expected_hash = metadata['original_hash']
+            if current_hash != expected_hash:
+                if not force:
+                    return {
+                        "status": "error",
+                        "error": "File has been modified since conversion. Use --force to override.",
+                        "expected_hash": expected_hash,
+                        "current_hash": current_hash
+                    }
+                hash_warning = "File was modified since conversion (hash mismatch)"
+        except IOError:
+            pass  # If hash calculation fails, continue without verification
 
     # Determine encoding
     target_encoding = encoding
@@ -123,7 +153,7 @@ def restore_encoding(
             except OSError:
                 pass  # Directory not empty
 
-    return {
+    result = {
         "status": "success",
         "file": str(output_path),
         "encoding": target_encoding,
@@ -131,6 +161,9 @@ def restore_encoding(
         "backup_removed": backup_removed,
         "metadata_removed": meta_removed
     }
+    if hash_warning:
+        result["warning"] = hash_warning
+    return result
 
 
 def main():
@@ -157,6 +190,11 @@ def main():
         action="store_true",
         help="Keep backup and metadata files"
     )
+    parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        help="Force restore even if file hash doesn't match"
+    )
 
     args = parser.parse_args()
 
@@ -165,7 +203,8 @@ def main():
         encoding=args.encoding,
         output=args.output,
         errors=args.errors,
-        cleanup=not args.keep_backup
+        cleanup=not args.keep_backup,
+        force=args.force
     )
 
     # Output result as JSON

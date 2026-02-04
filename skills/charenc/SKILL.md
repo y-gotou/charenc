@@ -65,6 +65,7 @@ This restores cp932 encoding and removes backup/metadata.
 | `-o, --output` | Output path (default: overwrite) |
 | `--errors` | Error handling: strict/replace/backslashreplace |
 | `--keep-backup` | Keep backup and metadata |
+| `-f, --force` | Force restore even if file hash doesn't match |
 
 ## Error Handling
 
@@ -76,6 +77,15 @@ python scripts/restore_encoding.py file.txt --errors replace
 
 # Show as \xNN
 python scripts/restore_encoding.py file.txt --errors backslashreplace
+```
+
+## Hash Verification
+
+When restoring, the tool verifies that the file hasn't been modified unexpectedly by comparing SHA256 hashes. If the hash doesn't match (e.g., the file was edited outside the normal workflow):
+
+```bash
+# Force restore despite hash mismatch
+python scripts/restore_encoding.py file.txt --force
 ```
 
 ## Supported Encodings

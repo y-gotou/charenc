@@ -84,34 +84,63 @@ def convert_to_utf8(
             bdir = path.parent
         bdir.mkdir(parents=True, exist_ok=True)
         backup_path = bdir / f"{path.name}.{encoding}.bak"
-        shutil.copy2(path, backup_path)
+        try:
+            shutil.copy2(path, backup_path)
+        except (IOError, OSError) as e:
+            return {"status": "error", "error": f"Backup failed: {e}"}
 
-    # Create metadata directory
-    meta_dir = path.parent / ".charenc_meta"
-    meta_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save metadata
-    metadata = {
-        "original_file": str(path),
-        "original_encoding": encoding,
-        "original_size": len(original_bytes),
-        "original_hash": get_file_hash(path),
-        "backup_path": str(backup_path) if backup_path else None,
-        "line_ending": line_ending,
-        "converted_at": datetime.now().isoformat()
-    }
-    meta_path = meta_dir / f"{path.name}.json"
-    with open(meta_path, 'w', encoding='utf-8') as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-    # Write UTF-8 file
+    # Determine output path
     output_path = Path(output).resolve() if output else path
 
     # Normalize line endings to LF for UTF-8
     text_normalized = text.replace('\r\n', '\n').replace('\r', '\n')
 
-    with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(text_normalized)
+    # Prepare UTF-8 bytes and calculate hashes in memory (before any file modification)
+    utf8_bytes = text_normalized.encode('utf-8')
+    original_hash = hashlib.sha256(original_bytes).hexdigest()
+    converted_hash = hashlib.sha256(utf8_bytes).hexdigest()
+
+    # Create metadata directory
+    meta_dir = path.parent / ".charenc_meta"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save metadata first (before writing file to avoid orphaned conversions)
+    metadata = {
+        "original_file": str(path),
+        "output_file": str(output_path),
+        "original_encoding": encoding,
+        "original_size": len(original_bytes),
+        "original_hash": original_hash,
+        "converted_hash": converted_hash,
+        "backup_path": str(backup_path) if backup_path else None,
+        "line_ending": line_ending,
+        "converted_at": datetime.now().isoformat()
+    }
+    meta_path = meta_dir / f"{path.name}.json"
+    try:
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+    except (IOError, OSError) as e:
+        return {"status": "error", "error": f"Metadata write failed: {e}"}
+
+    # If output is in a different directory, also save metadata there
+    if output_path.parent != path.parent:
+        output_meta_dir = output_path.parent / ".charenc_meta"
+        output_meta_dir.mkdir(parents=True, exist_ok=True)
+        output_meta_path = output_meta_dir / f"{output_path.name}.json"
+        try:
+            with open(output_meta_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+        except (IOError, OSError) as e:
+            # Non-fatal: metadata already saved in original location
+            pass
+
+    # Write UTF-8 file last (after metadata is saved successfully)
+    try:
+        with open(output_path, 'wb') as f:
+            f.write(utf8_bytes)
+    except IOError as e:
+        return {"status": "error", "error": f"Cannot write file: {e}"}
 
     return {
         "status": "success",

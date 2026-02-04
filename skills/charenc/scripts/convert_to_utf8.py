@@ -82,9 +82,12 @@ def convert_to_utf8(
             bdir = Path(backup_dir)
         else:
             bdir = path.parent
-        bdir.mkdir(parents=True, exist_ok=True)
-        backup_path = bdir / f"{path.name}.{encoding}.bak"
-        shutil.copy2(path, backup_path)
+        try:
+            bdir.mkdir(parents=True, exist_ok=True)
+            backup_path = bdir / f"{path.name}.{encoding}.bak"
+            shutil.copy2(path, backup_path)
+        except (IOError, OSError) as e:
+            return {"status": "error", "error": f"Cannot create backup: {e}"}
 
     # Create metadata directory
     meta_dir = path.parent / ".charenc_meta"
@@ -100,10 +103,6 @@ def convert_to_utf8(
         "line_ending": line_ending,
         "converted_at": datetime.now().isoformat()
     }
-    meta_path = meta_dir / f"{path.name}.json"
-    with open(meta_path, 'w', encoding='utf-8') as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
-
     # Write UTF-8 file
     output_path = Path(output).resolve() if output else path
 
@@ -112,6 +111,13 @@ def convert_to_utf8(
 
     with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(text_normalized)
+
+    meta_path = meta_dir / f"{output_path.name}.json"
+    try:
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+    except (IOError, OSError) as e:
+        return {"status": "error", "error": f"Cannot write metadata: {e}"}
 
     return {
         "status": "success",

@@ -68,12 +68,12 @@ def restore_encoding(
             except (json.JSONDecodeError, IOError):
                 continue
 
-    # Verify file hash if metadata contains original_hash
+    # Verify file hash if metadata contains converted_hash
     hash_warning = None
-    if metadata and 'original_hash' in metadata:
+    if metadata and 'converted_hash' in metadata:
         try:
             current_hash = get_file_hash(path)
-            expected_hash = metadata['original_hash']
+            expected_hash = metadata['converted_hash']
             if current_hash != expected_hash:
                 if not force:
                     return {

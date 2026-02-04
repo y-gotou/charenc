@@ -92,17 +92,25 @@ def convert_to_utf8(
     # Determine output path
     output_path = Path(output).resolve() if output else path
 
+    # Normalize line endings to LF for UTF-8
+    text_normalized = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # Write UTF-8 file first
+    with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(text_normalized)
+
     # Create metadata directory
     meta_dir = path.parent / ".charenc_meta"
     meta_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save metadata
+    # Save metadata (including converted_hash calculated after writing)
     metadata = {
         "original_file": str(path),
         "output_file": str(output_path),
         "original_encoding": encoding,
         "original_size": len(original_bytes),
         "original_hash": get_file_hash(path),
+        "converted_hash": get_file_hash(output_path),
         "backup_path": str(backup_path) if backup_path else None,
         "line_ending": line_ending,
         "converted_at": datetime.now().isoformat()
@@ -125,12 +133,6 @@ def convert_to_utf8(
         except (IOError, OSError) as e:
             # Non-fatal: metadata already saved in original location
             pass
-
-    # Normalize line endings to LF for UTF-8
-    text_normalized = text.replace('\r\n', '\n').replace('\r', '\n')
-
-    with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(text_normalized)
 
     return {
         "status": "success",

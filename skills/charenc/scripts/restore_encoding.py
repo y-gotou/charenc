@@ -55,6 +55,19 @@ def restore_encoding(
         except (json.JSONDecodeError, IOError) as e:
             return {"status": "error", "error": f"Cannot read metadata: {e}"}
 
+    # If metadata not found by filename, search by output_file field
+    if metadata is None and meta_dir.exists():
+        for json_file in meta_dir.glob("*.json"):
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    candidate = json.load(f)
+                    if candidate.get("output_file") == str(path):
+                        metadata = candidate
+                        meta_path = json_file
+                        break
+            except (json.JSONDecodeError, IOError):
+                continue
+
     # Verify file hash if metadata contains original_hash
     hash_warning = None
     if metadata and 'original_hash' in metadata:

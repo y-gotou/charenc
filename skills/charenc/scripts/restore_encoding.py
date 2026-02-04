@@ -23,7 +23,8 @@ def restore_encoding(
     output: str = None,
     errors: str = 'strict',
     cleanup: bool = True,
-    force: bool = False
+    force: bool = False,
+    strict_hash: bool = False
 ) -> dict:
     """Restore file to original encoding.
 
@@ -34,6 +35,7 @@ def restore_encoding(
         errors: Error handling ('strict', 'replace', 'backslashreplace', 'xmlcharrefreplace')
         cleanup: Remove backup and metadata files after restore
         force: Force restore even if file hash doesn't match
+        strict_hash: Fail if file hash doesn't match conversion metadata (can be overridden with force)
 
     Returns:
         dict with restoration result
@@ -70,15 +72,17 @@ def restore_encoding(
 
     # Verify file hash if metadata contains converted_hash
     hash_warning = None
-    if metadata and 'converted_hash' in metadata:
+    expected_hash = None
+    current_hash = None
+    if metadata and metadata.get('converted_hash'):
         try:
             current_hash = get_file_hash(path)
             expected_hash = metadata['converted_hash']
             if current_hash != expected_hash:
-                if not force:
+                if strict_hash and not force:
                     return {
                         "status": "error",
-                        "error": "File has been modified since conversion. Use --force to override.",
+                        "error": "File has been modified since conversion (hash mismatch). Use --force to override.",
                         "expected_hash": expected_hash,
                         "current_hash": current_hash
                     }
@@ -176,6 +180,9 @@ def restore_encoding(
     }
     if hash_warning:
         result["warning"] = hash_warning
+        if expected_hash and current_hash:
+            result["expected_hash"] = expected_hash
+            result["current_hash"] = current_hash
     return result
 
 
@@ -204,9 +211,14 @@ def main():
         help="Keep backup and metadata files"
     )
     parser.add_argument(
+        "--strict-hash",
+        action="store_true",
+        help="Fail if file hash doesn't match conversion metadata (can be overridden with --force)"
+    )
+    parser.add_argument(
         "--force", "-f",
         action="store_true",
-        help="Force restore even if file hash doesn't match"
+        help="Force restore even if file hash doesn't match (useful with --strict-hash)"
     )
 
     args = parser.parse_args()
@@ -217,7 +229,8 @@ def main():
         output=args.output,
         errors=args.errors,
         cleanup=not args.keep_backup,
-        force=args.force
+        force=args.force,
+        strict_hash=args.strict_hash
     )
 
     # Output result as JSON

@@ -34,9 +34,11 @@ python convert_to_utf8.py <file> --encoding <encoding>
 ```json
 {
   "original_file": "example.txt",
+  "output_file": "example.txt",
   "original_encoding": "cp932",
   "original_size": 1024,
   "original_hash": "sha256hash...",
+  "converted_hash": "sha256hash...",
   "backup_path": "example.txt.cp932.bak",
   "line_ending": "CRLF",
   "converted_at": "2026-02-03T10:30:00"
@@ -64,6 +66,12 @@ python restore_encoding.py <file>
 | `--output`, `-o` | 出力先（デフォルト: 上書き） |
 | `--errors` | エラー処理: strict/replace/backslashreplace/xmlcharrefreplace |
 | `--keep-backup` | バックアップを保持 |
+| `--strict-hash` | ハッシュ不一致をエラーにする（`--force`で上書き） |
+| `--force`, `-f` | ハッシュ不一致でも強制的に続行（主に`--strict-hash`用） |
+
+**ハッシュ検証**:
+- デフォルト: ハッシュ不一致でも警告して続行
+- `--strict-hash`: ハッシュ不一致でエラー（`--force`で続行可能）
 
 **エラー処理オプション**:
 - `strict`: 変換不可能な文字でエラー（デフォルト）

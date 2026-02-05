@@ -1,11 +1,6 @@
 ---
 name: charenc
-description: |
-  Character encoding conversion for editing non-UTF-8 files with AI agents.
-  Use when: (1) Editing files with Japanese characters that appear garbled,
-  (2) Working with legacy codebases using cp932/Shift-JIS/EUC-JP encoding,
-  (3) Converting file encodings before editing and restoring after.
-  Workflow: convert to UTF-8 -> edit -> restore original encoding.
+description: "Character encoding conversion for editing non-UTF-8 files with AI agents. Use when: (1) Editing files with Japanese characters that appear garbled, (2) Working with legacy codebases using cp932/Shift-JIS/EUC-JP encoding, (3) Converting file encodings before editing and restoring after. Workflow: convert to UTF-8 -> edit -> restore original encoding."
 ---
 
 # Character Encoding Conversion

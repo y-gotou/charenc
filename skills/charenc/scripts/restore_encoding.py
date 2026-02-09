@@ -19,23 +19,15 @@ def get_file_hash(file_path: Path) -> str:
 
 def restore_encoding(
     file_path: str,
-    encoding: str = None,
-    output: str = None,
     errors: str = 'strict',
-    cleanup: bool = True,
-    force: bool = False,
-    strict_hash: bool = False
+    cleanup: bool = True
 ) -> dict:
     """Restore file to original encoding.
 
     Args:
         file_path: Path to the UTF-8 file to restore
-        encoding: Target encoding (default: from metadata)
-        output: Output file path (default: overwrite original)
         errors: Error handling ('strict', 'replace', 'backslashreplace', 'xmlcharrefreplace')
         cleanup: Remove backup and metadata files after restore
-        force: Force restore even if file hash doesn't match
-        strict_hash: Fail if file hash doesn't match conversion metadata (can be overridden with force)
 
     Returns:
         dict with restoration result
@@ -48,77 +40,49 @@ def restore_encoding(
     # Load metadata
     meta_dir = path.parent / ".charenc_meta"
     meta_path = meta_dir / f"{path.name}.json"
-    metadata = None
 
-    if meta_path.exists():
-        try:
-            with open(meta_path, 'r', encoding='utf-8') as f:
-                metadata = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            return {"status": "error", "error": f"Cannot read metadata: {e}"}
+    if not meta_path.exists():
+        return {
+            "status": "error",
+            "error": "Metadata not found. Cannot restore without metadata."
+        }
 
-    # If metadata not found by filename, search by output_file field
-    if metadata is None and meta_dir.exists():
-        for json_file in meta_dir.glob("*.json"):
-            try:
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    candidate = json.load(f)
-                    if candidate.get("output_file") == str(path):
-                        metadata = candidate
-                        meta_path = json_file
-                        break
-            except (json.JSONDecodeError, IOError):
-                continue
+    try:
+        with open(meta_path, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        return {"status": "error", "error": f"Cannot read metadata: {e}"}
+
+    # Verify metadata format (v2)
+    if metadata.get("schema") != "charenc-simple":
+        return {
+            "status": "error",
+            "error": "Unsupported metadata format. Please use charenc v2.0 to convert this file.",
+            "found_schema": metadata.get("schema", "unknown (v1 format)")
+        }
 
     # Verify file hash if metadata contains converted_hash
     hash_warning = None
     expected_hash = None
     current_hash = None
-    if metadata and metadata.get('converted_hash'):
+    if metadata.get('converted_hash'):
         try:
             current_hash = get_file_hash(path)
             expected_hash = metadata['converted_hash']
             if current_hash != expected_hash:
-                if strict_hash and not force:
-                    return {
-                        "status": "error",
-                        "error": "File has been modified since conversion (hash mismatch). Use --force to override.",
-                        "expected_hash": expected_hash,
-                        "current_hash": current_hash
-                    }
                 hash_warning = "File was modified since conversion (hash mismatch)"
         except IOError:
             pass  # If hash calculation fails, continue without verification
 
-    # Determine encoding
-    target_encoding = encoding
-    if target_encoding is None:
-        if metadata is None:
-            return {
-                "status": "error",
-                "error": "No metadata found. Specify encoding with --encoding"
-            }
-        target_encoding = metadata["original_encoding"]
+    # Get encoding from metadata
+    target_encoding = metadata["original_encoding"]
 
-    # Get line ending from metadata
-    line_ending = "LF"
-    if metadata:
-        line_ending = metadata.get("line_ending", "LF")
-
-    # Read UTF-8 content
+    # Read UTF-8 content (preserve newlines as-is)
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8', newline='') as f:
             text = f.read()
     except IOError as e:
         return {"status": "error", "error": f"Cannot read file: {e}"}
-
-    # Restore line endings
-    if line_ending == "CRLF":
-        # Normalize to LF first, then convert to CRLF
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
-        text = text.replace('\n', '\r\n')
-    elif line_ending == "CR":
-        text = text.replace('\r\n', '\n').replace('\n', '\r')
 
     # Convert to original encoding
     try:
@@ -133,9 +97,8 @@ def restore_encoding(
         return {"status": "error", "error": f"Unknown encoding: {target_encoding}"}
 
     # Write output file
-    output_path = Path(output).resolve() if output else path
     try:
-        with open(output_path, 'wb') as f:
+        with open(path, 'wb') as f:
             f.write(encoded_bytes)
     except IOError as e:
         return {"status": "error", "error": f"Cannot write file: {e}"}
@@ -172,9 +135,8 @@ def restore_encoding(
 
     result = {
         "status": "success",
-        "file": str(output_path),
+        "file": str(path),
         "encoding": target_encoding,
-        "line_ending": line_ending,
         "backup_removed": backup_removed,
         "metadata_removed": meta_removed
     }
@@ -192,14 +154,6 @@ def main():
     )
     parser.add_argument("file", help="UTF-8 file to restore")
     parser.add_argument(
-        "--encoding", "-e",
-        help="Target encoding (default: from metadata)"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        help="Output file path (default: overwrite original)"
-    )
-    parser.add_argument(
         "--errors",
         default="strict",
         choices=["strict", "replace", "backslashreplace", "xmlcharrefreplace"],
@@ -210,27 +164,13 @@ def main():
         action="store_true",
         help="Keep backup and metadata files"
     )
-    parser.add_argument(
-        "--strict-hash",
-        action="store_true",
-        help="Fail if file hash doesn't match conversion metadata (can be overridden with --force)"
-    )
-    parser.add_argument(
-        "--force", "-f",
-        action="store_true",
-        help="Force restore even if file hash doesn't match (useful with --strict-hash)"
-    )
 
     args = parser.parse_args()
 
     result = restore_encoding(
         args.file,
-        encoding=args.encoding,
-        output=args.output,
         errors=args.errors,
-        cleanup=not args.keep_backup,
-        force=args.force,
-        strict_hash=args.strict_hash
+        cleanup=not args.keep_backup
     )
 
     # Output result as JSON

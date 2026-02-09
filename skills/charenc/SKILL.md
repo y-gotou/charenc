@@ -3,9 +3,14 @@ name: charenc
 description: "Character encoding conversion for editing non-UTF-8 files with AI agents. Use when: (1) Editing files with Japanese characters that appear garbled, (2) Working with legacy codebases using cp932/Shift-JIS/EUC-JP encoding, (3) Converting file encodings before editing and restoring after. Workflow: convert to UTF-8 -> edit -> restore original encoding."
 ---
 
-# Character Encoding Conversion
+# Character Encoding Conversion (v2.0)
 
 Most AI agents operate in UTF-8. This skill enables editing non-UTF-8 files (cp932, shift-jis, euc-jp, etc.) through a convert-edit-restore workflow.
+
+**v2.0 Changes**:
+- Simplified CLI (removed `--output`, `--backup-dir`, `--strict-hash`, `--force`)
+- No line ending conversion (preserves CRLF/LF/CR as-is)
+- Metadata v2 format (`schema: "charenc-simple"`)
 
 ## Quick Start
 
@@ -48,20 +53,14 @@ This restores cp932 encoding and removes backup/metadata.
 | Option | Description |
 |--------|-------------|
 | `-e, --encoding` | Source encoding (required) |
-| `-o, --output` | Output path (default: overwrite) |
-| `--backup-dir` | Backup directory |
 | `--no-backup` | Skip backup creation |
 
 ### restore_encoding.py
 
 | Option | Description |
 |--------|-------------|
-| `-e, --encoding` | Target encoding (default: from metadata) |
-| `-o, --output` | Output path (default: overwrite) |
-| `--errors` | Error handling: strict/replace/backslashreplace |
+| `--errors` | Error handling: strict/replace/backslashreplace/xmlcharrefreplace |
 | `--keep-backup` | Keep backup and metadata |
-| `--strict-hash` | Fail on hash mismatch (override with `--force`) |
-| `-f, --force` | Force restore even if file hash doesn't match |
 
 ## Error Handling
 
@@ -77,18 +76,13 @@ python scripts/restore_encoding.py file.txt --errors backslashreplace
 
 ## Hash Verification
 
-When restoring, the tool can verify the file content by comparing SHA256 hashes.
+When restoring, the tool verifies the file content by comparing SHA256 hashes:
 
-- Default: if the hash doesn't match (e.g., you edited the file), restore continues with a warning.
-- Strict mode: use `--strict-hash` to fail on hash mismatch (can be overridden with `--force`).
+- If the hash doesn't match (e.g., you edited the file), restore continues with a warning
+- The warning includes both expected and current hash values
+- Restore always succeeds (no strict mode in v2.0)
 
-```bash
-# Fail on hash mismatch
-python scripts/restore_encoding.py file.txt --strict-hash
-
-# Override strict mode
-python scripts/restore_encoding.py file.txt --strict-hash --force
-```
+This helps detect unexpected file modifications while allowing intentional edits.
 
 ## Supported Encodings
 

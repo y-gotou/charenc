@@ -1,4 +1,4 @@
-# charenc
+# charenc (v2.0)
 
 AIエージェントで非UTF-8ファイル（cp932, Shift-JIS, EUC-JP等）を編集するための文字エンコーディング変換スキル。
 
@@ -6,6 +6,11 @@ AIエージェントで非UTF-8ファイル（cp932, Shift-JIS, EUC-JP等）を�
 
 多くのAIエージェント（Claude Code, Codex, Cursor等）はUTF-8で動作するため、cp932等のファイルを直接編集すると文字化けが発生します。
 このスキルは「UTF-8に変換 → 編集 → 元のエンコーディングに復元」というワークフローを提供します。
+
+**v2.0の主な変更**:
+- シンプルなCLI（不要なオプションを削減）
+- 改行コード変換を廃止（CRLF/LF/CRをそのまま保持）
+- Metadata v2形式（`schema: "charenc-simple"`）
 
 ## インストール
 

@@ -89,6 +89,12 @@ def restore_encoding(
     try:
         with open(path, 'r', encoding='utf-8', newline='') as f:
             text = f.read()
+    except UnicodeDecodeError as e:
+        return {
+            "status": "error",
+            "error": f"Invalid UTF-8 content: {e}",
+            "hint": "The file is not valid UTF-8. It may be corrupted or not converted with convert_to_utf8.py."
+        }
     except IOError as e:
         return {"status": "error", "error": f"Cannot read file: {e}"}
 

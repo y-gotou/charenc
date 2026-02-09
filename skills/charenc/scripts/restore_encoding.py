@@ -61,6 +61,16 @@ def restore_encoding(
             "found_schema": metadata.get("schema", "unknown (v1 format)")
         }
 
+    # Verify required keys
+    required_keys = ["original_encoding", "original_hash", "converted_hash",
+                     "backup_path", "converted_at"]
+    missing_keys = [k for k in required_keys if k not in metadata]
+    if missing_keys:
+        return {
+            "status": "error",
+            "error": f"Invalid metadata: missing required keys: {', '.join(missing_keys)}"
+        }
+
     # Verify file hash if metadata contains converted_hash
     hash_warning = None
     expected_hash = None
@@ -108,10 +118,10 @@ def restore_encoding(
     meta_removed = False
 
     if cleanup and metadata:
-        # Remove backup file
+        # Remove backup file (restrict to same directory as target file)
         if metadata.get("backup_path"):
-            backup_path = Path(metadata["backup_path"])
-            if backup_path.exists():
+            backup_path = Path(metadata["backup_path"]).resolve()
+            if backup_path.parent == path.parent and backup_path.exists():
                 try:
                     backup_path.unlink()
                     backup_removed = True

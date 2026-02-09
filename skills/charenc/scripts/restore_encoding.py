@@ -62,8 +62,7 @@ def restore_encoding(
         }
 
     # Verify required keys
-    required_keys = ["original_encoding", "original_hash", "converted_hash",
-                     "backup_path", "converted_at"]
+    required_keys = ["original_encoding", "converted_hash", "converted_at"]
     missing_keys = [k for k in required_keys if k not in metadata]
     if missing_keys:
         return {
@@ -71,18 +70,17 @@ def restore_encoding(
             "error": f"Invalid metadata: missing required keys: {', '.join(missing_keys)}"
         }
 
-    # Verify file hash if metadata contains converted_hash
+    # Verify file hash
     hash_warning = None
     expected_hash = None
     current_hash = None
-    if metadata.get('converted_hash'):
-        try:
-            current_hash = get_file_hash(path)
-            expected_hash = metadata['converted_hash']
-            if current_hash != expected_hash:
-                hash_warning = "File was modified since conversion (hash mismatch)"
-        except IOError:
-            pass  # If hash calculation fails, continue without verification
+    try:
+        current_hash = get_file_hash(path)
+        expected_hash = metadata['converted_hash']
+        if current_hash != expected_hash:
+            hash_warning = "File was modified since conversion (hash mismatch)"
+    except IOError:
+        pass  # If hash calculation fails, continue without verification
 
     # Get encoding from metadata
     target_encoding = metadata["original_encoding"]
